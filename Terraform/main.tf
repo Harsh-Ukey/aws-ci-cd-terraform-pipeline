@@ -3,14 +3,23 @@
 # ==========================================
 terraform {
   backend "s3" {
-    bucket = "YOUR_S3_BUCKET_NAME" # <-- REPLACE THIS with the S3 bucket you created
+    bucket = "terraform-bucket231" # <-- REPLACE THIS with the S3 bucket you created
     key    = "state/terraform.tfstate"
-    region = "us-east-1"
+    region = "eu-north-1"
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = "eu-north-1"
+}
+# This block automatically finds the latest Amazon Linux 2023 image in your current region
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
 }
 
 # ==========================================
@@ -31,14 +40,14 @@ resource "aws_internet_gateway" "igw" {
 resource "aws_subnet" "public_subnet_1" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"
+  availability_zone       = "eu-north-1a"
   map_public_ip_on_launch = true # Required since we have no NAT Gateway
 }
 
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "10.0.2.0/24"
-  availability_zone       = "us-east-1b"
+  availability_zone       = "eu-north-1b"
   map_public_ip_on_launch = true
 }
 
@@ -133,8 +142,8 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # ==========================================
 resource "aws_launch_template" "app_lt" {
   name_prefix   = "webapp-lt-"
-  image_id      = "ami-0c101f26f147fa7fd" # Amazon Linux 2023 in us-east-1
-  instance_type = "t2.micro"              # Free Tier Eligible
+  image_id      = data.aws_ami.amazon_linux_2023.id # Amazon Linux 2023 in us-east-1
+  instance_type = "t3.micro"              # Free Tier Eligible
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ec2_profile.name

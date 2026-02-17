@@ -1,6 +1,5 @@
-name: CI/CD Pipeline - Build, Push, and Deploy
+name: Deploy App and Infrastructure
 
-# 1. This tells GitHub to run this script ONLY when you push to the 'main' branch
 on:
   push:
     branches:
@@ -8,48 +7,47 @@ on:
 
 jobs:
   deploy:
-    name: Deploy App and Infrastructure
     runs-on: ubuntu-latest
 
     steps:
-      # 2. Grab the code from your repository
-      - name: Checkout Repository
+      # 1. Check out the code from the repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 3. Log securely into your AWS Account using the Secrets you just set
+      # 2. Authenticate with AWS using your stored Secrets
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # Ensure this matches your AWS setup
+          aws-region: eu-north-1 # Stockholm region
 
-      # 4. Log into Amazon ECR
+      # 3. Log in to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 5. Build the Docker image, tag it, and push it to ECR
-      - name: Build, tag, and push Docker image
+      # 4. Build, Tag, and Push the Docker image to ECR
+      - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: my-webapp # Must match the ECR repo name you created
+          ECR_REPOSITORY: my-webapp
           IMAGE_TAG: latest
         run: |
           cd app
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 6. Install Terraform on the GitHub runner
+      # 5. Set up Terraform on the GitHub runner
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # 7. Initialize Terraform (downloads AWS provider and connects to your S3 state bucket)
+      # 6. Initialize Terraform (Downloads plugins and connects to S3 backend)
       - name: Terraform Init
-        working-directory: ./terraform
+        working-directory: ./Terraform
         run: terraform init
 
-      # 8. Apply Terraform (Builds the VPC, EC2, and Load Balancer automatically)
+      # 7. Apply Terraform (Builds the AWS infrastructure)
       - name: Terraform Apply
-        working-directory: ./terraform
+        working-directory: ./Terraform
         run: terraform apply -auto-approve

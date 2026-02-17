@@ -8,10 +8,9 @@ usermod -a -G docker ec2-user
 
 # 2. Authenticate Docker with your AWS ECR
 # REPACE 'YOUR_ACCOUNT_ID' and 'us-east-1' if you are using a different region
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
-
+aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 732517664789.dkr.ecr.eu-north-1.amazonaws.com
 # 3. Pull the Docker image from your ECR repository
-docker pull YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/my-webapp:latest
+docker pull 732517664789.dkr.ecr.eu-north-1.amazonaws.com/my-webapp:latest
 
 # 4. Run the Docker container, mapping port 80 of the container to port 80 of the EC2 instance
-docker run -d -p 80:80 YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/my-webapp:latest
+docker run -d -p 80:80 732517664789.dkr.ecr.eu-north-1.amazonaws.com/my-webapp:latest
