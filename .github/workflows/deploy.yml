@@ -1,0 +1,55 @@
+name: CI/CD Pipeline - Build, Push, and Deploy
+
+# 1. This tells GitHub to run this script ONLY when you push to the 'main' branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy App and Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      # 2. Grab the code from your repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 3. Log securely into your AWS Account using the Secrets you just set
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 # Ensure this matches your AWS setup
+
+      # 4. Log into Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 5. Build the Docker image, tag it, and push it to ECR
+      - name: Build, tag, and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: my-webapp # Must match the ECR repo name you created
+          IMAGE_TAG: latest
+        run: |
+          cd app
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # 6. Install Terraform on the GitHub runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # 7. Initialize Terraform (downloads AWS provider and connects to your S3 state bucket)
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      # 8. Apply Terraform (Builds the VPC, EC2, and Load Balancer automatically)
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
